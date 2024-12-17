@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Db {
 
@@ -49,7 +52,12 @@ public class Db {
         try {
             sqlCon = con.prepareStatement(consulta);
 
-            sqlCon.setString(1, datahora);
+            LocalDateTime localDateTime = LocalDateTime.parse(datahora,
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+            Timestamp timestamp = Timestamp.valueOf(localDateTime);
+
+            sqlCon.setTimestamp(1, timestamp);
             sqlCon.setString(2, nome);
             sqlCon.setString(3, cpf);
 
