@@ -3,6 +3,7 @@ package banco;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -12,9 +13,21 @@ public class Db {
 
     private Connection con = null;
     private PreparedStatement sqlCli = null, sqlCon = null;
+    private static int num;
 
     public Db(String url, String user, String password) {
         conectar(url, user, password);
+        num = 0;
+    }
+
+    public int index(boolean qtIndex) {
+        // se for falso, eu somo mais um indice
+        if (qtIndex = false) {
+            num += 1;
+            return num;
+        }
+        // agora se for verdadeiro, ele mostra em qual indice está
+        return num;
     }
 
     public void insertClient(String nome, String cpf, String telefone, String endereco) {
@@ -43,7 +56,6 @@ public class Db {
                 e.printStackTrace();
             }
         }
-
     }
 
     public void insertConsult(String nome, String datahora, String cpf) {
@@ -57,9 +69,9 @@ public class Db {
 
             Timestamp timestamp = Timestamp.valueOf(localDateTime);
 
-            sqlCon.setTimestamp(1, timestamp);
-            sqlCon.setString(2, nome);
-            sqlCon.setString(3, cpf);
+            sqlCon.setTimestamp(index(false), timestamp);
+            sqlCon.setString(index(false), nome);
+            sqlCon.setString(index(false), cpf);
 
             sqlCon.executeUpdate();
             System.out.println("Dados inseridos.");
@@ -77,16 +89,27 @@ public class Db {
         }
     }
 
+    // Arruma pra quando deletar alguem, ser deletado as consultas dele
     protected void deletarCliente(String cpf) {
         String cliente = "DELETE FROM cliente WHERE cpf = ?";
-        String consultCliente = "SELECT cliente.nome,consulta.datahora FROM consulta INNER JOIN cliente ON cliente.cpf = consulta.cpf ";
+        String consultCliente = "SELECT cliente.nome,consulta.datahora FROM consulta INNER JOIN cliente ON cliente.cpf = consulta.cpf WHERE cliente.cpf = ?";
         try {
             sqlCon = con.prepareStatement(consultCliente);
-            sqlCon.executeQuery();
-            sqlCli = con.prepareStatement(cliente);
-            sqlCli.setString(1, cpf);
-            int num = sqlCli.executeUpdate();
-            System.out.printf("Deletado: (%d) || %s \n", num, cpf);
+            sqlCon.setString(1, consultCliente);
+            ResultSet aux = sqlCon.executeQuery();
+
+            if (aux.next()) {
+
+                sqlCli = con.prepareStatement(cliente);
+                sqlCli.setString(1, cpf);
+                int num = sqlCli.executeUpdate();
+                System.out.printf("Deletado: (%d) || %s \n", num, cpf);
+
+            } else {
+                System.out.println("Não existe:" + cpf + " no banco de dados.");
+            }
+            aux.close();
+            sqlCon.close();
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -99,6 +122,43 @@ public class Db {
             }
         }
 
+    }
+
+    // fazer o agendamento da consulta
+    protected void agendarConsulta() {
+
+    }
+
+    // verificar se existe a pessoa no banco de dados
+    protected boolean verificarPessoaDB(String cpf) {
+        String procurarPessoa = "SELECT nome FROM clientes WHERE cpf = ?";
+        try {
+
+            sqlCli = con.prepareStatement(procurarPessoa);
+            ResultSet aux = sqlCli.executeQuery();
+            if (aux.next()) {
+                return true;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    protected boolean verificarPessoaConsultas(String cpf) {
+        String procurarConsultas = "SELECT consulta.cpf FROM cliente INNER JOIN consulta ON cliente.cpf = consulta.cpf WHERE cliente.cpf = ? ";
+        try {
+            sqlCli = con.prepareStatement(procurarConsultas);
+            sqlCli.setString(1, procurarConsultas);
+            ResultSet aux = sqlCli.executeQuery();
+            if (aux.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     protected void conectar(String url, String user, String password) {
