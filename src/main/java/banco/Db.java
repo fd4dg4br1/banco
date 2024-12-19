@@ -8,6 +8,9 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Db {
 
@@ -89,33 +92,23 @@ public class Db {
         }
     }
 
-    // Arruma pra quando deletar alguem, ser deletado as consultas dele
     protected void deletarCliente(String cpf) {
         String cliente = "DELETE FROM cliente WHERE cpf = ?";
-        String consultCliente = "SELECT cliente.nome,consulta.datahora FROM consulta INNER JOIN cliente ON cliente.cpf = consulta.cpf WHERE cliente.cpf = ?";
+        // String consultCliente = "SELECT cliente.nome,consulta.datahora FROM consulta
+        // INNER JOIN cliente ON cliente.cpf = consulta.cpf WHERE cliente.cpf = ?";
         try {
-            sqlCon = con.prepareStatement(consultCliente);
-            sqlCon.setString(1, consultCliente);
-            ResultSet aux = sqlCon.executeQuery();
+            sqlCli = con.prepareStatement(cliente);
+            sqlCli.setString(1, cpf);
+            int num = sqlCli.executeUpdate();
+            System.out.printf("Deletado: (%d) || %s \n", num, cpf);
 
-            if (aux.next()) {
-
-                sqlCli = con.prepareStatement(cliente);
-                sqlCli.setString(1, cpf);
-                int num = sqlCli.executeUpdate();
-                System.out.printf("Deletado: (%d) || %s \n", num, cpf);
-
-            } else {
-                System.out.println("Não existe:" + cpf + " no banco de dados.");
-            }
-            aux.close();
-            sqlCon.close();
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
             try {
                 if (sqlCli != null) {
                     sqlCli.close();
+                    sqlCon.close();
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -125,7 +118,22 @@ public class Db {
     }
 
     // fazer o agendamento da consulta
-    protected void agendarConsulta() {
+    protected void agendarConsulta(String nome, String cpf, Timestamp datahora) {
+
+        String agendar = "INSERT INTO consulta(nome,cpf,datahora) VALUES(?,?,?)";
+        try {
+            sqlCon = con.prepareStatement(agendar);
+            sqlCon.setString(1, nome);
+            sqlCon.setString(2, cpf);
+            sqlCon.setTimestamp(3, datahora);
+
+            sqlCon.executeUpdate();
+
+            System.out.println("Consulta agendada!");
+            sqlCon.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -136,7 +144,7 @@ public class Db {
 
             sqlCli = con.prepareStatement(procurarPessoa);
             ResultSet aux = sqlCli.executeQuery();
-            if (aux.next()) {
+            if (aux.first()) {
                 return true;
             }
 
@@ -149,10 +157,10 @@ public class Db {
     protected boolean verificarPessoaConsultas(String cpf) {
         String procurarConsultas = "SELECT consulta.cpf FROM cliente INNER JOIN consulta ON cliente.cpf = consulta.cpf WHERE cliente.cpf = ? ";
         try {
-            sqlCli = con.prepareStatement(procurarConsultas);
-            sqlCli.setString(1, procurarConsultas);
-            ResultSet aux = sqlCli.executeQuery();
-            if (aux.next()) {
+            sqlCon = con.prepareStatement(procurarConsultas);
+            sqlCon.setString(1, procurarConsultas);
+            ResultSet aux = sqlCon.executeQuery();
+            if (aux.first()) {
                 return true;
             }
         } catch (SQLException e) {
@@ -161,13 +169,34 @@ public class Db {
         return false;
     }
 
-    protected void conectar(String url, String user, String password) {
+    protected Map procurarPessoa(String cpf) {
+        Map<String, List<String>> pessoa = new HashMap<>();
+        String procurar = "SELECT nome,telefone,endereco FROM cliente WHERE cpf = ?";
+        try {
+            sqlCli = con.prepareStatement(procurar);
+            ResultSet resultado = sqlCli.executeQuery();
+
+            if (resultado.first()) {
+                pessoa.put(cpf, List.of(resultado.getString("nome"), resultado.getString("telefone"),
+                        resultado.getString("endereco")));
+            }
+            resultado.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return pessoa;
+    }
+
+    protected Connection conectar(String url, String user, String password) {
         try {
             con = DriverManager.getConnection(url, user, password);
             System.out.println("Conexão bem-sucedida!");
+
+            return con;
         } catch (SQLException e) {
             System.err.println("Erro ao conectar ao banco de dados: " + e.getMessage());
         }
+        return null;
     }
 
     public void fecharConexao() {
