@@ -79,7 +79,10 @@ public class Db {
 
     protected void deletarCliente(String cpf) {
         String cliente = "DELETE FROM cliente WHERE cpf = ?";
+        String consultCliente = "SELECT cliente.nome,consulta.datahora FROM consulta INNER JOIN cliente ON cliente.cpf = consulta.cpf ";
         try {
+            sqlCon = con.prepareStatement(consultCliente);
+            sqlCon.executeQuery();
             sqlCli = con.prepareStatement(cliente);
             sqlCli.setString(1, cpf);
             int num = sqlCli.executeUpdate();
