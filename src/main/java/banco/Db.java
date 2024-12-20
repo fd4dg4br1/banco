@@ -155,6 +155,7 @@ public class Db {
         return pessoa;
     }
 
+    // fazer uma função para devolver as consultas em uma string
     protected Map<String, List<List<String>>> procurarConsultas(String cpf) {
         String procurar = "SELECT nome, datahora FROM consulta WHERE cpf = ?";
         Map<String, List<List<String>>> consultas = new HashMap<>();
